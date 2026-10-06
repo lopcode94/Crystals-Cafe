@@ -1,0 +1,34 @@
+# ---- Crystals Cafe ----
+
+# Personal-use-only font (The Wildeast demo). Its license doesn't allow redistribution,
+# so it stays on this computer. The game falls back to its other fonts without it.
+assets/ui-font.ttf
+
+# Temporary test pages
+__*.html
+__*.js
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# In case tooling gets added later
+node_modules/
+dist/
+.env
+.env.*

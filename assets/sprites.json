@@ -1,0 +1,246 @@
+{
+    "version":  1,
+    "savedAt":  "2026-10-05T21:21:10.5082627-04:00",
+    "sprites":  {
+                    "couch":  "assets/couch.png",
+                    "mattress":  "assets/mattress.png",
+                    "stove":  "assets/stove.png",
+                    "player":  "assets/player.png",
+                    "customer":  "assets/customer.png",
+                    "counter":  "assets/counter.png",
+                    "customer_regular":  "assets/customer_regular.png",
+                    "customer_regular_angry":  "assets/customer_regular_angry.png",
+                    "customer_jittery":  "assets/customer_jittery.png",
+                    "customer_bigSpender":  "assets/customer_bigSpender.png",
+                    "floor":  "assets/floor.png",
+                    "wall_back":  "assets/wall_back.png",
+                    "wall_left":  "assets/wall_left.png",
+                    "poster":  "assets/poster.png",
+                    "cook_runner_portrait":  "assets/cook_runner_portrait.png",
+                    "cook_runner_full":  "assets/cook_runner_full.png",
+                    "linoleum":  "assets/linoleum.png",
+                    "ui_topbar":  "assets/ui_topbar.png",
+                    "ui_panel":  "assets/ui_panel.png",
+                    "ui_button":  "assets/ui_button.png",
+                    "ui_bubble":  "assets/ui_bubble.png",
+                    "ui_pipe":  "assets/ui_pipe.png",
+                    "ui_pipe_elbow":  "assets/ui_pipe_elbow.png",
+                    "cutscene_boss":  "assets/cutscene_boss.png",
+                    "fridge":  "assets/fridge.png",
+                    "bagging":  "assets/bagging.png",
+                    "cooler":  "assets/cooler.png",
+                    "customer_jittery_angry":  "assets/customer_jittery_angry.png",
+                    "ui_logo":  "assets/ui_logo.png",
+                    "ui_menu_bg":  "assets/ui_menu_bg.png",
+                    "cs_paper":  "assets/cs_paper.png",
+                    "cs_chalkboard":  "assets/cs_chalkboard.png",
+                    "cs_background":  "assets/cs_background.png"
+                },
+    "tweaks":  {
+                   "mattress":  {
+                                    "scale":  2.4,
+                                    "x":  7,
+                                    "y":  -60
+                                },
+                   "couch":  {
+                                 "scale":  1.35,
+                                 "x":  24,
+                                 "y":  11
+                             },
+                   "counter":  {
+                                   "scale":  1.1,
+                                   "x":  2,
+                                   "y":  20,
+                                   "sat":  67
+                               },
+                   "floor":  {
+                                 "scale":  4,
+                                 "x":  -16,
+                                 "y":  0
+                             },
+                   "customer_regular":  {
+                                            "scale":  1.25,
+                                            "x":  0,
+                                            "y":  -33,
+                                            "hip":  0.9,
+                                            "shoulder":  0.7,
+                                            "hand":  0.76,
+                                            "eyeX":  0.38,
+                                            "eyeR":  0,
+                                            "eyeY":  0.265,
+                                            "armX":  0.13,
+                                            "legX":  0.38
+                                        },
+                   "customer_regular_angry":  {
+                                                  "scale":  1.25,
+                                                  "x":  0,
+                                                  "y":  -33,
+                                                  "eyeR":  0,
+                                                  "hand":  0.72,
+                                                  "armX":  0.27,
+                                                  "shoulder":  0.47,
+                                                  "legX":  0.46,
+                                                  "hip":  0.9
+                                              },
+                   "customer_jittery":  {
+                                            "scale":  1.1,
+                                            "x":  0,
+                                            "y":  -24,
+                                            "hip":  0.77,
+                                            "armX":  0,
+                                            "eyeR":  0.065,
+                                            "eyeY":  0.25,
+                                            "eyeX":  0.6
+                                        },
+                   "stove":  {
+                                 "scale":  1,
+                                 "x":  16,
+                                 "y":  7,
+                                 "sat":  83,
+                                 "hue":  -4
+                             },
+                   "linoleum":  {
+                                    "scale":  2.35,
+                                    "x":  0,
+                                    "y":  0
+                                },
+                   "layout:panel_orders":  {
+                                               "scale":  1,
+                                               "x":  0,
+                                               "y":  2,
+                                               "rot":  -3
+                                           },
+                   "layout:panel_recipes":  {
+                                                "scale":  1,
+                                                "x":  0,
+                                                "y":  0,
+                                                "rot":  2.5
+                                            },
+                   "layout:panel_hands":  {
+                                              "scale":  1,
+                                              "x":  -3,
+                                              "y":  7,
+                                              "rot":  2
+                                          },
+                   "layout:tag_shift":  {
+                                            "scale":  1,
+                                            "x":  0,
+                                            "y":  -12,
+                                            "rot":  -7
+                                        },
+                   "layout:tag_rep":  {
+                                          "scale":  1,
+                                          "x":  0,
+                                          "y":  0,
+                                          "rot":  -6
+                                      },
+                   "layout:tag_cash":  {
+                                           "scale":  1,
+                                           "x":  -16,
+                                           "y":  -12,
+                                           "rot":  -2.5
+                                       },
+                   "fx:retro":  {
+                                    "gray":  false,
+                                    "serpentine":  true,
+                                    "downscale":  1,
+                                    "method":  "sierra2",
+                                    "colors":  256
+                                },
+                   "wall_back":  {
+                                     "scale":  2.65,
+                                     "x":  0,
+                                     "y":  0
+                                 },
+                   "wall_left":  {
+                                     "scale":  3.5,
+                                     "x":  0,
+                                     "y":  0
+                                 },
+                   "fridge":  {
+                                  "scale":  1.1,
+                                  "x":  24,
+                                  "y":  -2
+                              },
+                   "cooler":  {
+                                  "scale":  0.5,
+                                  "x":  -7,
+                                  "y":  16,
+                                  "sat":  67,
+                                  "hue":  -12
+                              },
+                   "customer_jittery_angry":  {
+                                                  "scale":  1,
+                                                  "x":  0,
+                                                  "y":  0,
+                                                  "legX":  0.475,
+                                                  "hip":  0.74,
+                                                  "armX":  0
+                                              },
+                   "ui_logo":  {
+                                   "scale":  0.9,
+                                   "x":  0,
+                                   "y":  0
+                               },
+                   "rig:punk":  {
+                                    "r":  {
+                                              "headFront":  {
+                                                                "dx":  7,
+                                                                "rot":  -0.03490658503988659,
+                                                                "scale":  1.01,
+                                                                "flip":  true
+                                                            },
+                                              "armFrontL":  {
+                                                                "dx":  18,
+                                                                "dy":  7
+                                                            },
+                                              "armFrontR":  {
+                                                                "dx":  -4,
+                                                                "rot":  0.20943951023931953,
+                                                                "flip":  false,
+                                                                "dy":  4
+                                                            }
+                                          }
+                                },
+                   "rig:charmer":  {
+                                       "r":  {
+                                                 "armFrontL":  {
+                                                                   "dx":  -10,
+                                                                   "dy":  15,
+                                                                   "rot":  -0.13962634015954636,
+                                                                   "scale":  1.18
+                                                               },
+                                                 "armFrontR":  {
+                                                                   "dx":  7,
+                                                                   "dy":  4,
+                                                                   "flip":  true,
+                                                                   "scale":  1.22
+                                                               },
+                                                 "torsoBack":  {
+                                                                   "scale":  1.07,
+                                                                   "dx":  10
+                                                               },
+                                                 "legSideFar":  {
+                                                                    "dx":  21,
+                                                                    "dy":  4
+                                                                },
+                                                 "legSideFarBent":  {
+                                                                        "flip":  true
+                                                                    },
+                                                 "legSideNearBent":  {
+                                                                         "flip":  false,
+                                                                         "dx":  43,
+                                                                         "dy":  35,
+                                                                         "rot":  0.5585053606381855,
+                                                                         "scale":  0.9
+                                                                     }
+                                             }
+                                   },
+                   "cs_chalkboard":  {
+                                         "scale":  1,
+                                         "x":  0,
+                                         "y":  0,
+                                         "bright":  43
+                                     }
+               }
+}
