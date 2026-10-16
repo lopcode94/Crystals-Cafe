@@ -3986,10 +3986,15 @@ function drawHUDInk(ctx, w, ui) {
     }
     text(ctx, `$${sc.cash}  /  $${L.goal}`, bx + bw / 2, by + bh / 2 + 1, { size: 15, maxW: 380 });
   });
-  hudTag(ctx, "tag_rep", 786, 10, 166, 42, () => {                          // reputation
+  hudTag(ctx, "tag_rep", 786, 10, 166, 42, () => {                          // reputation and combo streak
+    const chain = sc.chain;
+    const active = chain > 0;
     text(ctx, 'REP', 808, 31, { size: 12, color: '#9d8fc2' });
     rrect(ctx, 830, 22, 110, 18, 6); ctx.fillStyle = THEME.slot; ctx.fill();
     rrect(ctx, 830, 22, Math.max(6, 110 * sc.rep / 100), 18, 6); ctx.fillStyle = `hsl(${sc.rep * 1.2},65%,42%)`; ctx.fill();
+    text(ctx, 'CHAIN', 820, 20, { align: 'left', size: 9, color: '#9d8fc2' });
+    text(ctx, active ? `x${chain + 1}` : 'READY', 890, 20, { align: 'left', size: 11, color: active ? '#ffd166' : '#d9d4bc' });
+    text(ctx, active ? `+$${chain * 2}` : '', 890, 33, { align: 'left', size: 10, color: '#7ee787' });
   });
   hudTag(ctx, "tag_customers", 962, 8, 160, 44, () => text(ctx, `Customers left: ${w.customers.remaining}`, 1042, 30, { size: 13, maxW: 140 }));
   hudTag(ctx, "tag_suspicion", 12, 72, 228, 46, () => {   // suspicion meter (section 10c): trembles when critical
