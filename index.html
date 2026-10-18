@@ -738,7 +738,7 @@ class PlayerController {
   doJob(label, dur, onDone, o = {}) { this.busy = dur; this.job = { label, dur, t: 0, onDone, melt: !!o.melt }; }
   get melting() { return !!(this.job && this.job.melt); }
   get depth() { return this.x + this.y; }
-  get speed() { return this.baseSpeed * (1 + 0.2 * (this.w.up.sneakers || 0)) * this.w.cook.moveMul; }
+  get speed() { return this.baseSpeed * (1 + 0.2 * (this.w.up.sneakers || 0)) * this.w.cook.moveMul * (this.w.hustleTimer > 0 ? 1 / CHAOS_CONFIG.mystery.hustleMul : 1); }
 
   enqueue(target) {
     if (this.tasks.length >= MAX_TASKS) { this.w.say('Action queue full!', this, '#ff8a80'); Events.emit('actionError'); return false; }
@@ -1154,7 +1154,7 @@ const CHAOS_CONFIG = {
     powerOutTime: 9, plugJiggleTime: 1.0,
   },
 
-  messes: { cleanTime: 1.2, sinkBrokenMul: 2, max: 6 },
+  messes: { cleanTime: 1.2, sinkBrokenMul: 2, max: 8, openingAt: 22 },
 
   critters: { speed: 1.6, staySeconds: 40, scareRadius: 2.5, nearPatienceMul: 1.3, shooRadius: 1.5, shooTime: 0.8 },
 
@@ -1164,7 +1164,7 @@ const CHAOS_CONFIG = {
     minGap: 14,                   // seconds between any two events
     majorGap: 60,                 // seconds between major events
     majorAfter: 45,               // no major events before this many seconds into a shift
-    levelIntensity: [0.35, 0.65, 0.85, 1.0, 1.15],   // per shift (shift 1 only after its tutorial)
+    levelIntensity: [0.6, 0.65, 0.85, 1.0, 1.15],   // per shift (shift 1 only after its tutorial)
     chaosMul: { low: 1.25, medium: 1.0, high: 0.5, extreme: 0 },
     recoveryWindow: 15,           // after EXTREME chaos: no new events for this long
     boredomAfter: 40, boredomMul: 1.8,
@@ -1177,16 +1177,17 @@ const CHAOS_CONFIG = {
     argument:       { weight: 2.5, cooldown: 80,  severity: 'minor' },
     brokenChair:    { weight: 1.5, cooldown: 90,  severity: 'minor' },
     mysteryBag:     { weight: 2,   cooldown: 90,  severity: 'minor' },
+    equipmentFailure: { weight: 2, cooldown: 75, severity: 'minor' },
     sinkBackup:     { weight: 1.5, cooldown: 100, severity: 'minor' },
     powerProblem:   { weight: 2,   cooldown: 80,  severity: 'minor' },
     wontLeave:      { weight: 2,   cooldown: 75,  severity: 'minor' },
-    inspectorScare: { weight: 1.2, cooldown: 200, severity: 'major' },
+    inspectorScare: { weight: 1.8, cooldown: 200, severity: 'major' },
     critter:        { weight: 2,   cooldown: 110, severity: 'major' },
     freezerStuck:   { weight: 2.5, cooldown: 70,  severity: 'minor' },   // only with the Used Freezer
   },
   argumentTime: 18, lingerTime: 25, flickerTime: 4, bagLifetime: 45, calmJobTime: 1.5, escortTime: 1.2, chairFixTime: 1.8,
   inspector: { truth: { inspector: 3, delivery: 2.5, lost: 2, customer: 2.5 } },
-  mystery: { outcome: { nothing: 7, bigTip: 1.5, suspicious: 1.5 }, bigTip: 25 },
+  mystery: { outcome: { nothing: 7, bigTip: 1.5, suspicious: 1.5 }, bigTip: 25, hustleTime: 18, hustleMul: 0.82 },
 
   chaos: {   // internal 0–100 chaos level (not shown to the player)
     weights: { anger: 28, suspicion: 22, broken: 10, bathroom: 6, mess: 4, orders: 3, stress: 18, critter: 6, event: 5 },
@@ -1641,6 +1642,7 @@ const BAG_OUTCOMES = {
   cash:       [2, ['Finders keepers.']],
   weird:      [3, ['A single wet sock.', 'A doll with no face.', 'A bag of smaller bags.', 'Somebody\'s dentures.']],
   suspicious: [2, ['Nope. Straight to the dumpster.', 'We did NOT see that.']],
+  hustle:     [2, ['An unopened coffee. Jackpot.', 'An energy bar. Still sealed.']],
 };
 class MysteryBag {
   constructor(w, x, y, box = false) { this.kind = 'bag'; this.w = w; this.x = x; this.y = y; this.box = box; this.born = w.time; this.hit = null; }
@@ -1654,6 +1656,7 @@ function resolveBag(w, bag) {
   const key = weightedPick(Object.fromEntries(Object.entries(BAG_OUTCOMES).map(([k, v]) => [k, v[0]])));
   const line = pick(BAG_OUTCOMES[key][1]);
   if (key === 'cash') { const n = 8; w.score.addCash(n); w.say(`${line}  +$${n}`, bag, '#7ee787'); }
+  else if (key === 'hustle') { w.hustleTimer = CHAOS_CONFIG.mystery.hustleTime; w.say(`${line}  HUSTLE UP!`, w.player, '#ffe066', -36); }
   else if (key === 'suspicious') w.suspicion.add(CHAOS_CONFIG.suspicion.gain.mysteryBagBad, bag, line);
   else { w.say(line, bag, '#efe3c4'); w.suspicion.add(-CHAOS_CONFIG.suspicion.loss.resolveEvent * 0.5); }
 }
@@ -1718,14 +1721,21 @@ const EVENT_DEFS = {
                                 if (b.cheap) discoverBargain(w, 'cheapChairs'); } },
   mysteryBag:     { cond: w => !w.bags.some(b => !b.box),
                     run: w => { const b = pick(w.booths); w.bags.push(new MysteryBag(w, b.x - 0.9, b.y + 0.9)); w.say('Whose bag is that?', b, '#ffe066', -10); } },
+  equipmentFailure: { cond: w => w.stations.some(s => s.state !== 'locked' && !s.broken),
+                      run: w => {
+                        const options = w.stations.filter(s => s.state !== 'locked' && !s.broken);
+                        const st = options.find(s => s.state === 'working') || pick(options);
+                        breakStation(w, st);
+                        addMess(w, st.x + rand(-0.55, 0.55), LAYOUT.serviceY + 0.65, 'litter');
+                      } },
   sinkBackup:     { cond: w => w.bathroom.enabled && !w.bathroom.problems.sinkBroken, run: w => w.bathroom.addProblem('sinkBroken', '*glug glug*') },
   powerProblem:   { cond: w => w.stations.some(s => s.state !== 'locked' && !s.broken && !(s.powerOut > 0)),
                     run: w => { const opts = w.stations.filter(s => s.state !== 'locked' && !s.broken && !(s.powerOut > 0)), st = opts.find(s => s.state === 'working') || pick(opts);
                                 st.powerOut = CHAOS_CONFIG.equipment.powerOutTime; w.say('*bzzzt*', st.servicePoint(), '#9fd8ff', -30); AudioManager.play('flicker'); } },
   wontLeave:      { cond: w => w.customers.list.some(c => c.state === CS.SAMPLING && !c.willLinger),
                     run: w => { pick(w.customers.list.filter(c => c.state === CS.SAMPLING && !c.willLinger)).willLinger = true; } },
-  inspectorScare: { cond: w => w.levelIndex >= 1 && w.customers.queue.length < LAYOUT.queue.length - 1 && !w.customers.list.some(c => c.lookalike),
-                    warn: w => w.say('A car just parked outside...', LAYOUT.door, '#ffe066', -10),
+  inspectorScare: { cond: w => w.levelIndex >= 0 && w.customers.queue.length < LAYOUT.queue.length - 1 && !w.customers.list.some(c => c.lookalike),
+                    warn: w => w.say('Someone is asking questions outside...', LAYOUT.door, '#ffe066', -10),
                     run: w => spawnLookalike(w) },
   critter:        { cond: w => w.critters.length === 0,
                     warn: w => w.say('*scritch scritch*', LAYOUT.door, '#cfc8e0', -10),
@@ -1857,7 +1867,7 @@ class World {
     this.level = levelDef; this.session = session; this.up = session.upgrades;
     this.levelIndex = LEVELS.indexOf(levelDef);
     this.cook = cookById(session.cook);
-    this.time = 0; this.selected = null; this.floaters = []; this.endTimer = 0;
+    this.time = 0; this.selected = null; this.floaters = []; this.endTimer = 0; this.hustleTimer = 0; this.openingMessesMade = false;
     this.stations = STATION_ORDER.map(t => new Station(t, !levelDef.stations.includes(t)));
     for (const st of this.stations) { st.w = this; st.wear = (session.wear || {})[st.type] || 0; st.broken = st.wear >= 100 && st.state !== 'locked'; }   // wear carries over between shifts
     this.supply = new Fixture('supply', LAYOUT.supplyX);
@@ -1883,7 +1893,7 @@ class World {
   stationTime(type) {
     const d = STATION_DEFS[type], B = CHAOS_CONFIG.bargain, cond = stationCondition(this.station(type));
     const bargain = (type === 'heat' && this.up.bargainStove ? B.bargainStoveSpeed : 1) * (type === 'mix' && this.up.cheapMixer ? B.cheapMixerSpeed : 1);
-    return d.time * (1 - 0.2 * (this.up[d.upgrade] || 0)) * this.cook.workMul * (CHAOS_CONFIG.equipment.speedMul[cond] || 1) * bargain;
+    return d.time * (1 - 0.2 * (this.up[d.upgrade] || 0)) * this.cook.workMul * (CHAOS_CONFIG.equipment.speedMul[cond] || 1) * bargain * (this.hustleTimer > 0 ? CHAOS_CONFIG.mystery.hustleMul : 1);
   }
   patienceDecayMul() { return this.level.decay * (1 - 0.15 * (this.up.lamp || 0)) * this.cook.patienceMul; }
   allItems() { return [...this.player.hands.filter(Boolean), ...this.stations.filter(s => s.item).map(s => s.item)]; }
@@ -1891,6 +1901,14 @@ class World {
 
   update(dt) {
     this.time += dt;
+    if (this.levelIndex === 0 && !this.openingMessesMade && this.tutorial && this.tutorial.done && this.time >= CHAOS_CONFIG.messes.openingAt) {
+      this.openingMessesMade = true;
+      addMess(this, 3.2, 6.1, 'litter');
+      addMess(this, 7.1, 8.1, 'spill');
+      addMess(this, 11.2, 4.8, 'puddle');
+      this.say('The rush left a mess. Better grab the mop!', this.player, '#ffcf7a', -36);
+    }
+    if (this.hustleTimer > 0) this.hustleTimer = Math.max(0, this.hustleTimer - dt);
     for (const s of this.stations) s.update(dt);
     this.customers.update(dt);
     this.player.update(dt);
@@ -3891,6 +3909,7 @@ const UI_LAYOUT = [
   { id: 'tag_rep',       label: 'Reputation tag',           rect: [786, 10, 166, 42] },
   { id: 'tag_customers', label: 'Customers-left tag',       rect: [962, 8, 160, 44] },
   { id: "tag_suspicion", label: "Suspicion tag",            rect: [12, 72, 228, 46] },
+  { id: 'tag_hustle',    label: 'Mystery find boost',       rect: [12, 127, 228, 38] },
   { id: 'buttons_top',   label: 'Fullscreen / pause / sound buttons', rect: [1134, 12, 132, 32] },
   { id: 'tutorial',      label: 'Tutorial strip',           rect: [240, 60, 800, 52] },
   { id: 'panel_hands',   label: 'Hands panel',              rect: [16, 600, 290, 104] },
@@ -4010,6 +4029,10 @@ function drawHUDInk(ctx, w, ui) {
     rrect(ctx, 60, 95, Math.max(6, 166 * v / 100), 14, 5); ctx.fillStyle = ["#6f9a5a", "#c9a640", "#d9772e", "#c62828"][S.level]; ctx.fill();
     if (S.flash > 0) { rrect(ctx, 58, 93, 170, 18, 6); ctx.strokeStyle = `rgba(255,120,60,${S.flash})`; ctx.lineWidth = 2.5; ctx.stroke(); }
     ctx.restore();
+  });
+  if (w.hustleTimer > 0) hudTag(ctx, "tag_hustle", 12, 127, 228, 38, () => {
+    text(ctx, 'LUCKY FIND · HUSTLE', 26, 146, { align: 'left', size: 12, color: '#ffe066' });
+    text(ctx, `${Math.ceil(w.hustleTimer)}s`, 226, 146, { align: 'right', size: 13, color: '#7ee787' });
   });
   for (const b of ui) b.draw(ctx);
 
