@@ -2,15 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Crystals Cafe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap">
 <style>
-  html, body { margin: 0; height: 100%; background: #110e17; overflow: hidden; }
-  body { display: flex; align-items: center; justify-content: center; }
+  html, body { margin: 0; width: 100%; height: 100%; background: #110e17; overflow: hidden; }
+  body {
+    box-sizing: border-box; height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: flex; align-items: center; justify-content: center;
+  }
   canvas { display: block; cursor: pointer; touch-action: none; }
+  canvas.mobile-rotated { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(90deg); }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #110e17; color: #efe3c4; font: 24px "Covered By Your Grace", cursive; z-index: 20; }
 #loading[hidden] { display: none; }
 
@@ -5581,14 +5585,30 @@ const Game = {
 };
 
 function resize() {
-  const s = Math.min(innerWidth / VIEW.W, innerHeight / VIEW.H), dpr = window.devicePixelRatio || 1;
+  const viewport = window.visualViewport, style = getComputedStyle(document.body);
+  const width = viewport ? viewport.width : document.documentElement.clientWidth;
+  const height = viewport ? viewport.height : document.documentElement.clientHeight;
   const c = Game.canvas;
+  const padL = parseFloat(style.paddingLeft), padR = parseFloat(style.paddingRight);
+  const padT = parseFloat(style.paddingTop), padB = parseFloat(style.paddingBottom);
+  const safeW = padL + padR, safeH = padT + padB;
+  const rotateMobile = matchMedia('(pointer: coarse) and (orientation: portrait)').matches;
+  c.classList.toggle('mobile-rotated', rotateMobile);
+  const availableW = rotateMobile ? height - safeH : width - safeW;
+  const availableH = rotateMobile ? width - safeW : height - safeH;
+  const s = Math.min(availableW / VIEW.W, availableH / VIEW.H), dpr = window.devicePixelRatio || 1;
   c.style.width = `${Math.floor(VIEW.W * s)}px`; c.style.height = `${Math.floor(VIEW.H * s)}px`;
+  if (rotateMobile) {
+    c.style.left = `calc(50% + ${(padL - padR) / 2}px)`;
+    c.style.top = `calc(50% + ${(padT - padB) / 2}px)`;
+  } else { c.style.left = ''; c.style.top = ''; }
   c.width = Math.round(VIEW.W * s * dpr); c.height = Math.round(VIEW.H * s * dpr);
   Game.scale = s * dpr;
 }
 function toCanvas(e) {
   const r = Game.canvas.getBoundingClientRect();
+  if (Game.canvas.classList.contains('mobile-rotated'))
+    return { x: (e.clientY - r.top) * VIEW.W / r.height, y: (r.right - e.clientX) * VIEW.H / r.width };
   return { x: (e.clientX - r.left) * VIEW.W / r.width, y: (e.clientY - r.top) * VIEW.H / r.height };
 }
 
@@ -5600,11 +5620,35 @@ async function boot() {
   Game.sm.add('title', TitleState).add('intro', LevelIntroState).add('play', PlayState)
          .add('pause', PauseState).add('levelEnd', LevelEndState).add('shop', ShopState).add('victory', VictoryState)
          .add('cookSelect', CookSelectState).add("cutscene", CutsceneState);
-  resize(); addEventListener('resize', resize);
-  // Left click acts; right/middle drag (or Space + left drag) pans the camera during a shift.
+  resize(); addEventListener('resize', resize); addEventListener('orientationchange', resize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+  // Taps act through the same game click handler; one-finger drag pans, and two fingers pinch-zoom.
   const cvs = Game.canvas;
+  const touchPointers = new Map();
+  let touchGesture = null, suppressTouchClick = false;
+  const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   cvs.addEventListener('pointermove', e => {
     const p = toCanvas(e);
+    if (e.pointerType === 'touch') {
+      if (!touchPointers.has(e.pointerId)) return;
+      e.preventDefault();
+      touchPointers.set(e.pointerId, p);
+      if (touchPointers.size >= 2) {
+        const [a, b] = [...touchPointers.values()], mid = midpoint(a, b), gap = distance(a, b);
+        if (touchGesture && touchGesture.pinch) {
+          if (touchGesture.gap > 0 && gap > 0 && Game.sm.name === 'play') Camera.zoomAt(mid.x, mid.y, gap / touchGesture.gap);
+          if (Game.sm.name === 'play') Camera.pan(mid.x - touchGesture.mid.x, mid.y - touchGesture.mid.y);
+        }
+        touchGesture = { pinch: true, moved: true, mid, gap };
+      } else if (touchGesture && !touchGesture.pinch) {
+        if (distance(p, touchGesture.start) > 10) touchGesture.moved = true;
+        if (touchGesture.moved && Game.sm.name === 'play') Camera.pan(p.x - touchGesture.last.x, p.y - touchGesture.last.y);
+        touchGesture.last = p;
+      }
+      Game.mouse = p;
+      return;
+    }
     if (Camera.drag) { Camera.pan(p.x - Game.mouse.x, p.y - Game.mouse.y); Camera.drag.moved = true; }
     Game.mouse = p;
   });
@@ -5612,12 +5656,33 @@ async function boot() {
     AudioManager.unlock();
     const p = toCanvas(e); Game.mouse = p;
     const inPlay = Game.sm.name === 'play';
+    if (e.pointerType === 'touch') {
+      e.preventDefault();
+      cvs.setPointerCapture(e.pointerId);
+      touchPointers.set(e.pointerId, p);
+      if (touchPointers.size === 1) touchGesture = { start: p, last: p, moved: false, pinch: false };
+      else {
+        suppressTouchClick = true;
+        const [a, b] = [...touchPointers.values()];
+        touchGesture = { pinch: true, moved: true, mid: midpoint(a, b), gap: distance(a, b) };
+      }
+      return;
+    }
     if (inPlay && (e.button === 1 || e.button === 2 || (e.button === 0 && Game.keys.has(' ')))) {
       Camera.drag = { moved: false }; cvs.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     if (e.button === 0) Game.sm.click(p.x, p.y);
   });
-  const endDrag = () => { Camera.drag = null; };
+  const endDrag = e => {
+    if (e.pointerType === 'touch') {
+      const p = toCanvas(e), wasSingleTap = touchPointers.size === 1 && touchGesture && !touchGesture.moved && !touchGesture.pinch && !suppressTouchClick;
+      touchPointers.delete(e.pointerId);
+      if (wasSingleTap && e.type === 'pointerup') Game.sm.click(p.x, p.y);
+      if (!touchPointers.size) { touchGesture = null; suppressTouchClick = false; }
+      return;
+    }
+    Camera.drag = null;
+  };
   cvs.addEventListener('pointerup', endDrag); cvs.addEventListener('pointercancel', endDrag);
   cvs.addEventListener('contextmenu', e => e.preventDefault());
   cvs.addEventListener('wheel', e => {
