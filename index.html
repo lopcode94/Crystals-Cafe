@@ -11,6 +11,8 @@
   html, body { margin: 0; height: 100%; background: #110e17; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; }
   canvas { display: block; cursor: pointer; touch-action: none; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; background: #110e17; color: #efe3c4; font: 24px "Covered By Your Grace", cursive; z-index: 20; }
+#loading[hidden] { display: none; }
 
   /* ---- Dev asset-swap sidebar (toggle with the ` key) ---- */
   .dev-panel {
@@ -80,6 +82,7 @@
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="loading" role="status" aria-live="polite">Loading Crystals Cafe…</div>
 <script>
 'use strict';
 /* =============================================================================
@@ -4946,13 +4949,13 @@ async function loadProjectAssets() {
   try { const res = await fetch('assets/sprites.json', { cache: 'no-store' }); if (!res.ok) return; m = await res.json(); }
   catch (e) { return; }
   const v = encodeURIComponent(m.savedAt || '');
-  for (const [key, src] of Object.entries(m.sprites || {})) {
+  await Promise.all(Object.entries(m.sprites || {}).map(async ([key, src]) => {
     try {
       const img = await loadImage(`${src}?v=${v}`);
       Sprites.project[key] = { def: sheetDef(key, img, { src, autoFit: true }), img, ready: true };
       if (STATIC_KEYS.has(key)) StaticLayer.invalidate();
     } catch (e) { console.warn(`Project sprite "${key}" could not be loaded from ${src}.`); }
-  }
+  }));
   // sizes saved in this browser win over the project's
   // Size/rig settings: whichever was saved more recently wins, setting by setting (the other fills any gaps).
   const projectNewer = (Date.parse(m.savedAt) || 0) >= DevAssets.localTweakTime;
@@ -5566,7 +5569,7 @@ function toCanvas(e) {
   return { x: (e.clientX - r.left) * VIEW.W / r.width, y: (e.clientY - r.top) * VIEW.H / r.height };
 }
 
-function boot() {
+async function boot() {
   Game.canvas = document.getElementById('game');
   Game.ctx = Game.canvas.getContext('2d');
   Game.newCampaign();
@@ -5606,7 +5609,8 @@ function boot() {
   loadCustomFont();
   DitherFX.init();
   DevAssets.init();
-  loadProjectAssets();
+  await loadProjectAssets();
+  document.getElementById('loading').hidden = true;
   addEventListener('keydown', e => {
     if (e.key === '`' || e.key === '~' || e.code === 'Backquote') { e.preventDefault(); DevAssets.toggle(); return; }
     Game.keys.add(keyName(e));
